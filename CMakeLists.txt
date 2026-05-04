@@ -62,3 +62,19 @@ add_plugin(parameq
     INCLUDE_DIRS
         ${parameq_source}
         ${dsp_source})
+
+
+# Ring modulator project
+set(ringmod_source ${CMAKE_CURRENT_SOURCE_DIR}/projects/RingModulator)
+
+add_plugin(ringmod
+    VERSION 0.1.0
+    PLUGIN_NAME "Ring Modulator"
+    PROD_NAME RingModulator
+    PROD_CODE Rmdt
+    SYNTH FALSE
+    SOURCES
+        ${ringmod_source}/PluginEditor.cpp
+        ${ringmod_source}/PluginProcessor.cpp
+    INCLUDE_DIRS
+        ${ringmod_source})
