@@ -9,13 +9,13 @@ namespace DSP
 
 SuperChorus::SuperChorus(float maxTimeMs, unsigned int numChannels) :
     distortionRamp(0.05f),
-    widthRamp(0.05f)
+    widthRamp(0.05f),
+    maxTimeMs(maxTimeMs)
 {
     // Construct chorus voices
     for (auto i = 0; i < MAX_VOICES; ++i)
     {
         voices[i] = std::make_unique<DSP::Chorus>(maxTimeMs, numChannels);
-        currentPhases[i].store(0.f);
     }
 }
 
@@ -44,6 +44,12 @@ void SuperChorus::clear()
 {
     for (auto chorusIdx = 0; chorusIdx < numVoices; ++chorusIdx)
         voices[chorusIdx]->clear();
+}
+
+void SuperChorus::reset()
+{
+    for (auto chorusIdx = 0; chorusIdx < numVoices; ++chorusIdx)
+        voices[chorusIdx]->reset();
 }
 
 void SuperChorus::process(juce::AudioBuffer<float>& buffer)
@@ -131,12 +137,6 @@ void SuperChorus::process(juce::AudioBuffer<float>& buffer)
                 buffer.addSample(1, sampleIdx, sample * rightGain * gainCompensation);
         }
     }
-
-    // Update current phase values for the UI
-    for (auto chorusIdx = 0; chorusIdx < numVoices; ++chorusIdx)
-    {
-        currentPhases[chorusIdx].store(voices[chorusIdx]->getCurrentPhase());
-    }
 }
 
 void SuperChorus::setOffset(float newOffsetMs)
@@ -145,11 +145,12 @@ void SuperChorus::setOffset(float newOffsetMs)
     auto halfVoices = numVoices / 2;
 
     // Assign each chorus voice a different offset
-    for (auto i = 0; i < halfVoices / 2; ++i)
+    // Voices further away from stereo filed centre are smeared more
+    for (auto i = 0; i < halfVoices; ++i)
     {
-        auto smear = 2 * (numVoices - 1 - i);
+        auto smear = static_cast<float>(numVoices - 1 - i);
         voices[i]->setOffset(offset + offset * smear * timeSmearing);
-        voices[numVoices - 1 - i]->setOffset(offset + offset * (smear + 1) * timeSmearing);
+        voices[numVoices - 1 - i]->setOffset(offset + offset * (smear + 0.5f) * timeSmearing);
     }
     // Check parity
     auto parity = numVoices ^ (numVoices >> 1);
@@ -190,11 +191,7 @@ void SuperChorus::setNumVoices(unsigned int newNumVoices)
         voices[chorusIdx]->setPhaseOffset(phaseProp * chorusIdx);
     }
     setOffset(offset);
-}
-
-float SuperChorus::getCurrenPhase(unsigned int voiceIdx)
-{
-    return currentPhases[voiceIdx].load();
+    reset();
 }
 
 void SuperChorus::setDepth(float newDepthMs)
@@ -225,6 +222,31 @@ void SuperChorus::setDistortion(float newDistortion)
 {
     distortion = newDistortion;
     distortionRamp.setTarget(distortion);
+}
+
+std::vector<float> SuperChorus::getNormalizedTimePositions()
+{
+    std::vector<float> times(numVoices);
+    for (auto chorusIdx = 0; chorusIdx < numVoices; ++chorusIdx)
+    {
+        times[chorusIdx] = voices[chorusIdx]->getTimePosition() / maxTimeMs;
+    }
+    return times;
+}
+
+std::vector<float> SuperChorus::getNormalizedStereoPositions()
+{
+    /*
+    This is executed by the message thread, who
+    changes numVoices, the audio thread never changes
+    numVoices, so this is concurrent safe
+    */
+    std::vector<float> positions(numVoices);
+    for (auto chorusIdx = 0; chorusIdx < numVoices; ++chorusIdx)
+    {
+        positions[chorusIdx] = chorusIdx * numVoicesInv * width + (0.5f - width * 0.5f);
+    }
+    return positions;
 }
 
 }

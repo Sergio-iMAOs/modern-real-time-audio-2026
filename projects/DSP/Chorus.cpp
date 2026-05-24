@@ -21,6 +21,7 @@ Chorus::~Chorus()
 void Chorus::prepare(double newSampleRate, float maxTimeMs, unsigned int numChannels)
 {
     sampleRate = newSampleRate;
+    samplePeriod = static_cast<float>(1.0 / sampleRate);
 
     delayLine.prepare(static_cast<unsigned int>(std::round(maxTimeMs * static_cast<float>(0.001 * sampleRate))), MaxChannels);
     delayLine.setDelaySamples(static_cast<unsigned int>(std::ceil(0.001 * sampleRate))); // Set fixed delay to 1ms
@@ -38,10 +39,17 @@ void Chorus::clear()
     delayLine.clear();
 }
 
+void Chorus::reset()
+{
+    phaseState[0] = 0.f;
+    phaseState[1] = 0.f;
+}
+
 void Chorus::process(float* const* output, const float* const* input, unsigned int numChannels, unsigned int numSamples)
 {
     numChannels = std::min(numChannels, MaxChannels);
     constexpr float F_PI = static_cast<float>(M_PI);
+    float lfo[MaxChannels] { 0.f, 0.f };
 
     for (unsigned int n = 0; n < numSamples; ++n)
     {
@@ -49,11 +57,10 @@ void Chorus::process(float* const* output, const float* const* input, unsigned i
         phaseOffset = phaseOffsetRamp.getNext();
         float phase[2] {
             phaseState[0] + phaseOffset - (2.f * F_PI * static_cast<float>(phaseState[0] + phaseOffset > 2.f * F_PI)),
-            phaseState[1] + phaseOffset - (2.f * F_PI * static_cast<float>(phaseState[0] + phaseOffset > 2.f * F_PI))
+            phaseState[1] + phaseOffset - (2.f * F_PI * static_cast<float>(phaseState[1] + phaseOffset > 2.f * F_PI))
         };
 
         // Process LFO acording to mod type
-        float lfo[MaxChannels] { 0.f, 0.f };
         switch (modType)
         {
         case Tri:
@@ -89,6 +96,10 @@ void Chorus::process(float* const* output, const float* const* input, unsigned i
         for (unsigned int ch = 0; ch < numChannels; ++ch)
             output[ch][n] = y[ch];
     }
+
+    // Store time position to load from UI
+    const float modDelayMs = lfo[0] * 1000.f * samplePeriod;
+    timePos.store(modDelayMs);
 }
 
 void Chorus::setOffset(float newOffsetMs)
@@ -120,8 +131,10 @@ void Chorus::setPhaseOffset(float newPhaseOffset)
 {
     phaseOffsetRamp.setTarget(std::clamp(newPhaseOffset, 0.f, 2.f * static_cast<float>(M_PI)));
 }
-float Chorus::getCurrentPhase()
+
+float Chorus::getTimePosition()
 {
-    return phaseState[0] + phaseOffset - (2.f * M_PI * static_cast<float>(phaseState[0] + phaseOffset > 2.f * M_PI));
+    return timePos.load();
 }
+
 }

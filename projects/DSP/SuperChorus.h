@@ -40,6 +40,9 @@ public:
     // Clear contents of internal buffer
     void clear();
 
+    // Reset modulation phases
+    void reset();
+
     // Process audio
     void process(juce::AudioBuffer<float>& buffer);
 
@@ -67,7 +70,8 @@ public:
 
     void setNumVoices(unsigned int newNumVoices);
 
-    float getCurrenPhase(unsigned int voiceIdx);
+    std::vector<float> getNormalizedTimePositions();
+    std::vector<float> getNormalizedStereoPositions();
 
     static constexpr unsigned int MaxChannels { 2 };
 
@@ -92,7 +96,8 @@ private:
     float numVoicesInv { 1.f };
 
     std::array<std::unique_ptr<DSP::Chorus>, MAX_VOICES> voices;
-    std::array<std::atomic<float>, MAX_VOICES> currentPhases; // For UI
+
+    const float maxTimeMs;
 };
 
 }

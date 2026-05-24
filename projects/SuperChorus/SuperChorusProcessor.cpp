@@ -142,6 +142,11 @@ void SuperChorusProcessor::process(juce::AudioBuffer<float>& buffer, juce::MidiB
         buffer.addFrom(ch, 0, fxBuffer, ch, 0, static_cast<int>(numSamples));
 }
 
+DSP::SuperChorus &SuperChorusProcessor::getSuperChorus()
+{
+    return superChorus;
+}
+
 juce::AudioProcessorEditor* SuperChorusProcessor::createEditor()
 {
     return new SuperChorusEditor(*this);

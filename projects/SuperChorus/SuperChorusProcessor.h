@@ -27,14 +27,14 @@ namespace Param
     namespace Name
     {
         static const juce::String Enabled { "Enabled" };
-        static const juce::String Depth { "Depth" };
-        static const juce::String Rate { "Rate" };
+        static const juce::String Depth { "Mod Depth" };
+        static const juce::String Rate { "Mod Rate" };
         static const juce::String Offset { "Delay" };
         static const juce::String Smear { "Time Smearing" };
         static const juce::String Width { "Width" };
-        static const juce::String Distort { "Distort" };
+        static const juce::String Distort { "Drive" };
         static const juce::String BitDepth { "Bit Depth" };
-        static const juce::String Mix { "Mix" };
+        static const juce::String Mix { "Dry / Wet" };
         static const juce::String Voices { "Voices" };
         static const juce::String ModType { "Mod Type" };
         static const juce::String DistType { "Dist Type" };
@@ -105,7 +105,7 @@ class SuperChorusProcessor : public mrta::BaseProcessor
 {
 public:
     static constexpr float MaxDelaySizeMs { 
-        Param::Ranges::VoicesMax * Param::Ranges::OffsetMax + Param::Ranges::DepthMax * Param::Ranges::SmearMax
+        Param::Ranges::VoicesMax * Param::Ranges::OffsetMax * Param::Ranges::SmearMax + Param::Ranges::DepthMax
     };
     static const unsigned int MaxChannels { 2 };
 
@@ -117,6 +117,8 @@ public:
 
     // Audio stream callback
     void process(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
+    DSP::SuperChorus& getSuperChorus();
 
     // Creates the GUI
     juce::AudioProcessorEditor* createEditor() override;

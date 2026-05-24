@@ -334,6 +334,7 @@ add_plugin(SuperChorus
     SYNTH FALSE
     SOURCES
         ${spch_source}/SuperChorusProcessor.cpp
+        ${spch_source}/SuperChorusLAF.cpp
         ${spch_source}/SuperChorusEditor.cpp
         ${dsp_source}/DelayLine.cpp
         ${dsp_source}/Chorus.cpp

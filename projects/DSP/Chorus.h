@@ -3,6 +3,8 @@
 #include "DelayLine.h"
 #include "Ramp.h"
 
+#include <atomic>
+
 namespace DSP
 {
 
@@ -35,6 +37,9 @@ public:
     // Clear contents of internal buffer
     void clear();
 
+    // Resets phase
+    void reset();
+
     // Process audio
     void process(float* const* output, const float* const* input, unsigned int numChannels, unsigned int numSamples);
 
@@ -52,12 +57,13 @@ public:
 
     void setPhaseOffset(float newPhaseOffset);
 
-    float getCurrentPhase();
+    float getTimePosition();
 
     static constexpr unsigned int MaxChannels { 2 };
 
 private:
     double sampleRate { 48000.0 };
+    float samplePeriod { static_cast<float>(1.0 / sampleRate) };
 
     DelayLine delayLine;
 
@@ -74,6 +80,8 @@ private:
     float modRate { 0.f };
 
     ModulationType modType { Sin };
+
+    std::atomic<float> timePos;
 };
 
 }
