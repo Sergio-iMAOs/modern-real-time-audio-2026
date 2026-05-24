@@ -320,3 +320,24 @@ add_plugin(synth
         ${gui_source}
         ${dsp_source}
         ${synth})
+
+
+# Add "PhaseVocoder" plugin target
+set(spch_source ${CMAKE_CURRENT_SOURCE_DIR}/projects/SuperChorus)
+
+add_plugin(SuperChorus
+    VERSION 0.0.1
+    SYNTH FALSE
+    PLUGIN_NAME "Super Chorus"
+    PROD_NAME "SuperChorus"
+    PROD_CODE "SpCh"
+    SYNTH FALSE
+    SOURCES
+        ${spch_source}/SuperChorusProcessor.cpp
+        ${spch_source}/SuperChorusEditor.cpp
+        ${dsp_source}/DelayLine.cpp
+        ${dsp_source}/Chorus.cpp
+        ${dsp_source}/SuperChorus.cpp
+    INCLUDE_DIRS
+        ${dsp_source}
+        ${spch_source})
