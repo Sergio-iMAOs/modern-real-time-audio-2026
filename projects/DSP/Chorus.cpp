@@ -29,8 +29,10 @@ void Chorus::prepare(double newSampleRate, float maxTimeMs, unsigned int numChan
     offsetRamp.prepare(sampleRate, true, offsetMs * static_cast<float>(0.001 * sampleRate));
     modDepthRamp.prepare(sampleRate, true, modDepthMs * static_cast<float>(0.001 * sampleRate));
 
-    phaseState[0] = 0.f;
-    phaseState[1] = 0.f;
+    phaseOffsetRamp.prepare(sampleRate, true, offsetMs * static_cast<float>(0.001 * sampleRate));
+    phaseRamp.prepare(sampleRate, true, offsetMs * static_cast<float>(0.001 * sampleRate));
+
+    phaseState = 0.f;
     phaseInc = static_cast<float>(2.0 * M_PI / sampleRate) * modRate;
 }
 
@@ -41,46 +43,46 @@ void Chorus::clear()
 
 void Chorus::reset()
 {
-    phaseState[0] = 0.f;
-    phaseState[1] = 0.f;
+    // Phase reset ramping
+    phaseRamp.setTarget(phaseState, true);
+    phaseRamp.setTarget(0.f);
+    phaseState = 0.f;
 }
 
 void Chorus::process(float* const* output, const float* const* input, unsigned int numChannels, unsigned int numSamples)
 {
     numChannels = std::min(numChannels, MaxChannels);
     constexpr float F_PI = static_cast<float>(M_PI);
-    float lfo[MaxChannels] { 0.f, 0.f };
+    float lfo[2] { 0.f, 0.f };
 
     for (unsigned int n = 0; n < numSamples; ++n)
     {
         // Apply phase offset with phase wrapping
         phaseOffset = phaseOffsetRamp.getNext();
-        float phase[2] {
-            phaseState[0] + phaseOffset - (2.f * F_PI * static_cast<float>(phaseState[0] + phaseOffset > 2.f * F_PI)),
-            phaseState[1] + phaseOffset - (2.f * F_PI * static_cast<float>(phaseState[1] + phaseOffset > 2.f * F_PI))
-        };
+        float phase = phaseState + phaseRamp.getNext() + phaseOffset \
+                    - (2.f * F_PI * static_cast<float>(phaseState + phaseOffset > 2.f * F_PI));
 
         // Process LFO acording to mod type
         switch (modType)
         {
         case Tri:
-            lfo[0] = std::fabs((phase[0] - static_cast<float>(M_PI)) / static_cast<float>(M_PI));
-            lfo[1] = std::fabs((phase[1] - static_cast<float>(M_PI)) / static_cast<float>(M_PI));
+            lfo[0] = std::fabs((phase - static_cast<float>(M_PI)) / static_cast<float>(M_PI));
             break;
 
         case Sin:
-            lfo[0] = 0.5f + 0.5f * std::sin(phase[0]);
-            lfo[1] = 0.5f + 0.5f * std::sin(phase[1]);
+            lfo[0] = 0.5f + 0.5f * std::sin(phase);
             break;
         }
 
         // Increment and wrap phase states
-        phaseState[0] = std::fmod(phaseState[0] + phaseInc, static_cast<float>(2 * M_PI));
-        phaseState[1] = std::fmod(phaseState[1] + phaseInc, static_cast<float>(2 * M_PI));
+        phaseState = std::fmod(phaseState + phaseInc, static_cast<float>(2 * M_PI));
 
         // Apply mod depth and offset ramps
-        modDepthRamp.applyGain(lfo, numChannels);
-        offsetRamp.applySum(lfo, numChannels);
+        modDepthRamp.applyGain(lfo, 1);
+        offsetRamp.applySum(lfo, 1);
+
+        // Copy lfo sample
+        lfo[1] = lfo[0];
 
         // Delay in/out
         float x[MaxChannels];

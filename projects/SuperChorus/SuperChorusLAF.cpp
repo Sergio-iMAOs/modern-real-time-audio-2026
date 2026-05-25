@@ -1,26 +1,33 @@
 #include "SuperChorusLAF.h"
 
+#include "Utils.h"
+
+SuperChorusLAF::SuperChorusLAF()
+{
+    setColour(juce::Label::textColourId, colour3);
+}
+
 void SuperChorusLAF::drawPluginBackground(juce::Graphics &g, int width, int height)
 {
-    /*
+    
     juce::ColourGradient grad = juce::ColourGradient::vertical (
         colour0, 0.0f,
         colour1, (float)height
     );
     g.setGradientFill(grad);
-    */
-    g.setColour(colour0);
-    g.setColour(juce::Colours::darkslateblue);
     g.fillAll();
 }
 
+
+// Mostly AI generated
 void SuperChorusLAF::drawDisplay(
     juce::Graphics& g,
     juce::Rectangle<int> bounds,
     std::vector<float> timePos,
     std::vector<float> stereoPos,
     float drive,
-    float bitDepth
+    float bitDepth,
+    bool softClip
 )
 {
     const auto numVoices = std::min(timePos.size(), stereoPos.size());
@@ -206,29 +213,243 @@ void SuperChorusLAF::drawDisplay(
 
     for (size_t i = 0; i < numVoices; ++i)
     {
-        const float t = juce::jlimit(0.f, 1.f, timePos[i]);
+        const float t = utils::fast_log2(1.f + juce::jlimit(0.f, 1.f, timePos[i]));
         const float s = juce::jlimit(0.f, 1.f, stereoPos[i]);
         const auto  p = toCartesian(t, s);
 
         // Two-segment lerp: colour1 → colour4 → colour5
-        auto voiceDrive = std::abs((drive / (numVoices - 1) * i) * 2.f - 1.f);
+        auto voiceDrive = drive * std::fabs(static_cast<float>(i) / static_cast<float>(numVoices - 1) * 2.f - 1.f);
         const auto dotColour = voiceDrive < 0.5f
             ? colour1.interpolatedWith(colour4, voiceDrive * 2.f)
-            : colour4.interpolatedWith(colour5, (voiceDrive - 0.5f) * 2.f);
+            : colour4.interpolatedWith(colour6, (voiceDrive - 0.5f) * 2.f);
 
-        // Glow
-        g.setColour(dotColour.withAlpha(0.18f));
-        g.fillEllipse(p.x - glowRadius, p.y - glowRadius,
-                      glowRadius * 2.f, glowRadius * 2.f);
+        if (softClip)
+        {
+            // Glow
+            g.setColour(dotColour.withAlpha(0.18f));
+            g.fillEllipse(p.x - glowRadius, p.y - glowRadius,
+                        glowRadius * 2.f, glowRadius * 2.f);
 
-        // Core dot
-        g.setColour(dotColour);
-        g.fillEllipse(p.x - dotRadius, p.y - dotRadius,
-                      dotRadius * 2.f, dotRadius * 2.f);
+            // Core dot
+            g.setColour(dotColour);
+            g.fillEllipse(p.x - dotRadius, p.y - dotRadius,
+                        dotRadius * 2.f, dotRadius * 2.f);
 
-        // Highlight
-        g.setColour(juce::Colours::white.withAlpha(0.55f));
-        g.fillEllipse(p.x - dotRadius * 0.35f, p.y - dotRadius * 0.75f,
-                      dotRadius * 0.55f, dotRadius * 0.5f);
+            // Highlight
+            g.setColour(juce::Colours::white.withAlpha(0.55f));
+            g.fillEllipse(p.x - dotRadius * 0.35f, p.y - dotRadius * 0.75f,
+                        dotRadius * 0.55f, dotRadius * 0.5f);
+        }
+        else
+        {
+            // Hard clip
+            const float angle = juce::degreesToRadians(45.0f);
+            const auto rotation = juce::AffineTransform::rotation(angle, p.x, p.y);
+
+            // Glow
+            {
+                juce::Path path;
+                path.addRectangle(
+                    p.x - glowRadius,
+                    p.y - glowRadius,
+                    glowRadius * 2.f,
+                    glowRadius * 2.f
+                );
+
+                g.setColour(dotColour.withAlpha(0.18f));
+                g.fillPath(path, rotation);
+            }
+
+            // Core dot
+            {
+                juce::Path path;
+                path.addRectangle(
+                    p.x - dotRadius,
+                    p.y - dotRadius,
+                    dotRadius * 2.f,
+                    dotRadius * 2.f
+                );
+
+                g.setColour(dotColour);
+                g.fillPath(path, rotation);
+            }
+
+            // Highlight
+            {
+                juce::Path path;
+                path.addRectangle(
+                    p.x - dotRadius * 0.35f,
+                    p.y - dotRadius * 0.75f,
+                    dotRadius * 0.55f,
+                    dotRadius * 0.5f
+                );
+
+                g.setColour(juce::Colours::white.withAlpha(0.55f));
+                g.fillPath(path, rotation);
+            }
+        }
     }
+}
+
+
+// -----------------------------
+// ---------- SLIDERS ----------
+// -----------------------------
+void SuperChorusLAF::drawRotarySlider(
+    juce::Graphics &g,
+    int x,
+    int y,
+    int width,
+    int height,
+    float sliderPosProportional,
+    float startAngle,
+    float endAngle,
+    juce::Slider &slider
+)
+{
+    const auto radius       = (float) juce::jmin (width / 2, height / 2) - 4.0f;
+    const auto centreX      = (float) x + (float) width * 0.5f;
+    const auto centreY      = (float) y + (float) height * 0.5f;
+    const auto thickness    = 2.f;
+    const auto pointerAngle = startAngle + sliderPosProportional * (endAngle - startAngle);
+    const juce::Point<float> centre( centreX, centreY );
+
+    // Centre
+    const auto centreRadius = radius * 0.1f;
+    const auto centreRx     = centreX - centreRadius;
+    const auto centreRy     = centreY - centreRadius;
+    const auto centreRw     = centreRadius * 2.f;
+
+    g.setColour(colour6);
+    g.drawEllipse (centreRx, centreRy, centreRw, centreRw, thickness);
+
+    // --- Outline ---
+    const auto outRadius    = radius * 0.8f;
+
+    // Arc
+    juce::Path path;
+    path.addCentredArc(centreX, centreY, outRadius, outRadius, 0.f, startAngle, endAngle, true);
+
+    // Indicator lines
+    const auto numIndicators = 7;
+    for (auto lineIdx = 0; lineIdx < numIndicators; ++lineIdx)
+    {
+        auto angle = startAngle + (endAngle - startAngle) / (numIndicators - 1) * lineIdx;
+        path.startNewSubPath(   centre.getPointOnCircumference(radius, angle));
+        path.lineTo(            centre.getPointOnCircumference(outRadius, angle));
+    }
+
+    g.setColour(colour2);
+    g.strokePath(
+        path,
+        juce::PathStrokeType(
+            thickness,
+            juce::PathStrokeType::JointStyle::curved,
+            juce::PathStrokeType::EndCapStyle::rounded
+        )
+    );
+
+    // --- Path ---
+    const auto pathRadius           = radius * 0.6f;
+    const auto pathRx               = centreX - pathRadius;
+    const auto pathRy               = centreY - pathRadius;
+    const auto pathRw               = pathRadius * 2.f;
+    const auto pathThicknessProp    = 0.7f;
+    const juce::Rectangle<float> pathBounds(pathRx, pathRy, pathRw, pathRw);
+
+    juce::Path pathPath;
+    pathPath.addPieSegment(pathBounds, startAngle, pointerAngle, pathThicknessProp);
+
+    juce::ColourGradient grad = juce::ColourGradient::horizontal (
+        colour2, pathRx,
+        colour4, pathRx + pathRw
+    );
+    g.setGradientFill(grad);
+
+    //g.setColour(colour4);
+    g.fillPath(
+        pathPath
+    );
+
+    // --- Pointer ---
+    // Hand
+    const auto pointerStartRadius   = centreRadius;
+    const auto pointerLength        = radius * 0.75f;
+
+    juce::Path pointerPath;
+    pointerPath.startNewSubPath(centre.getPointOnCircumference(pointerStartRadius + pointerLength, pointerAngle));
+    pointerPath.lineTo(centre.getPointOnCircumference(pointerStartRadius, pointerAngle));
+
+    // Arc
+    const auto arcAngle     = 0.7853981634; // pi / 4
+    const auto arcLength    = outRadius * 0.8f;
+    /*
+    pointerPath.addCentredArc(
+        centreX,
+        centreY,
+        arcLength,
+        arcLength,
+        0.f,
+        pointerAngle - arcAngle * 0.5f,
+        pointerAngle + arcAngle * 0.5f,
+        true
+    );
+    */
+
+    // pointer
+    g.setColour (colour6);
+    g.strokePath(
+        pointerPath,
+        juce::PathStrokeType(
+            thickness,
+            juce::PathStrokeType::JointStyle::curved,
+            juce::PathStrokeType::EndCapStyle::rounded
+        )
+    );
+}
+
+juce::Slider::SliderLayout SuperChorusLAF::getSliderLayout (juce::Slider& slider)
+{
+    juce::Slider::SliderLayout layout;
+
+    // Entire slider bounds
+    auto bounds = slider.getLocalBounds();
+
+    // Textbox dimensions
+    const int textBoxWidth   = slider.getTextBoxWidth();
+    const int textBoxHeight  = slider.getTextBoxHeight();
+    const int bottomMargin   = textBoxHeight * 0.5f;
+
+    // Default: slider takes whole area
+    layout.sliderBounds = bounds;
+
+    if (slider.getTextBoxPosition() == juce::Slider::TextBoxRight)
+    {
+        // Place textbox at bottom-right instead of centered-right
+        layout.textBoxBounds = juce::Rectangle<int>(
+            bounds.getRight() - textBoxWidth,
+            bounds.getBottom() - textBoxHeight - bottomMargin,
+            textBoxWidth,
+            textBoxHeight
+        );
+
+        // Reduce slider bounds so it doesn't overlap textbox
+        layout.sliderBounds.removeFromRight(textBoxWidth);
+    }
+    else
+    {
+        // Fallback to default JUCE behaviour
+        return juce::LookAndFeel_V4::getSliderLayout(slider);
+    }
+
+    return layout;
+}
+
+juce::Label *SuperChorusLAF::createSliderTextBox(juce::Slider &slider)
+{
+    auto* label = new juce::Label();
+    label->setColour(juce::Label::textColourId, colour3);
+    label->setColour(juce::Label::backgroundColourId, colour0);
+    label->setJustificationType(juce::Justification::left);
+    return label;
 }

@@ -70,8 +70,9 @@ private:
     Ramp<float> offsetRamp;
     Ramp<float> modDepthRamp;
     Ramp<float> phaseOffsetRamp;
+    Ramp<float> phaseRamp;  // For ramping phase reset
 
-    float phaseState[2] { 0.f, 0.f };
+    float phaseState { 0.f };
     float phaseInc { 0.f };
     float phaseOffset { 0.f };
 

@@ -1,0 +1,2 @@
+SuperChorus setNumVoices calls reset() clicks?
+    Ramp phase?

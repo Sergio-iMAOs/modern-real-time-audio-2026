@@ -1,5 +1,5 @@
 #include "SuperChorusEditor.h"
-
+#include <SuperChorus.h>
 
 // Dimensions of the whole GUI
 constexpr int WIDTH  { 600 };
@@ -92,13 +92,24 @@ void SuperChorusEditor::paint(juce::Graphics& g)
         getLocalBounds().getHeight()
     );
 
+    // Get values from sliders, not directly from DSP
+    const auto normalizedDrive = static_cast<float>(
+        (driveSlider.getValue()   - driveSlider.getMinimum()) / \
+        (driveSlider.getMaximum() - driveSlider.getMinimum())
+    );
+    const auto normalizedBitDepth = static_cast<float>(
+        (bitDepthSlider.getValue()   - bitDepthSlider.getMinimum()) / \
+        (bitDepthSlider.getMaximum() - bitDepthSlider.getMinimum())
+    );
+
     laf.drawDisplay(
         g,
         displayBounds,
         superChorus.getNormalizedTimePositions(),
         superChorus.getNormalizedStereoPositions(),
-        static_cast<float>(driveSlider.getValue() / driveSlider.getMaximum()),
-        static_cast<float>(bitDepthSlider.getValue() / bitDepthSlider.getMaximum())
+        normalizedDrive,
+        normalizedBitDepth,
+        distTypeComboBox.getSelectedItemIndex() == DSP::SuperChorus::DistortionType::SoftClip
     );
 }
 
@@ -110,16 +121,20 @@ void SuperChorusEditor::resized()
     const auto componentWidth   = bounds.getWidth() / 4;
     const auto componentHeight  = bounds.getHeight() / 6; 
     const auto labelHeight      = componentHeight / 4;
-    const auto marginX        = 6;
-    const auto marginY        = 12;
+    const auto marginX          = 6;
+    const auto marginY          = 12;
+    const auto sliderTextWidth  = mixSlider.getTextBoxWidth();
 
-    auto rightBounds = bounds.removeFromRight(componentWidth);
-    auto& leftBounds = bounds;
+    auto rightBounds    = bounds.removeFromRight(componentWidth);
+    auto& leftBounds    = bounds;
 
     // Left
 
+    // Title
+    auto titleBounds    = leftBounds.removeFromTop(componentHeight);
+
     // Display
-    displayBounds = leftBounds.removeFromTop(componentHeight * 4);
+    displayBounds       = leftBounds.removeFromTop(componentHeight * 3);
 
     // Top row
     auto topBounds      = leftBounds.removeFromTop(componentHeight);
@@ -127,12 +142,12 @@ void SuperChorusEditor::resized()
     auto smearBounds    = topBounds.removeFromLeft(componentWidth);
     auto& widthBounds   = topBounds;
 
-    delayLabel .setBounds(delayBounds.removeFromTop(labelHeight));
-    smearLabel .setBounds(smearBounds.removeFromTop(labelHeight));
-    widthLabel .setBounds(widthBounds.removeFromTop(labelHeight));
     delaySlider.setBounds(delayBounds);
     smearSlider.setBounds(smearBounds);
     widthSlider.setBounds(widthBounds);
+    delayLabel .setBounds(delayBounds.removeFromRight(sliderTextWidth));
+    smearLabel .setBounds(smearBounds.removeFromRight(sliderTextWidth));
+    widthLabel .setBounds(widthBounds.removeFromRight(sliderTextWidth));
 
     // Bottom row
     auto& bottomBounds  = leftBounds;
@@ -140,11 +155,11 @@ void SuperChorusEditor::resized()
     auto modRateBounds  = bottomBounds.removeFromLeft(componentWidth);
     auto modTypeBounds  = bottomBounds.removeFromLeft(componentWidth);
 
-    modDepthLabel   .setBounds(modDepthBounds   .removeFromTop(labelHeight));
-    modRateLabel    .setBounds(modRateBounds    .removeFromTop(labelHeight));
-    modTypeLabel    .setBounds(modTypeBounds    .removeFromTop(labelHeight));
     modDepthSlider  .setBounds(modDepthBounds);
     modRateSlider   .setBounds(modRateBounds);
+    modDepthLabel   .setBounds(modDepthBounds   .removeFromRight(sliderTextWidth));
+    modRateLabel    .setBounds(modRateBounds    .removeFromRight(sliderTextWidth));
+    modTypeLabel    .setBounds(modTypeBounds    .removeFromTop(labelHeight));
     modTypeComboBox .setBounds(modTypeBounds    .reduced(marginX, marginY));
 
     // Right
@@ -155,16 +170,16 @@ void SuperChorusEditor::resized()
     auto voicesBounds     = rightBounds.removeFromTop(componentHeight);
     auto& mixBounds       = rightBounds;
 
-    driveLabel      .setBounds(driveBounds      .removeFromTop(labelHeight));
-    bitDepthLabel   .setBounds(bitDepthBounds   .removeFromTop(labelHeight));
-    distTypeLabel   .setBounds(distTypeBounds   .removeFromTop(labelHeight));
-    voicesLabel     .setBounds(voicesBounds     .removeFromTop(labelHeight));
-    mixLabel        .setBounds(mixBounds        .removeFromTop(labelHeight));
     driveSlider     .setBounds(driveBounds);
     bitDepthSlider  .setBounds(bitDepthBounds);
+    distTypeLabel   .setBounds(distTypeBounds   .removeFromTop(labelHeight));
     distTypeComboBox.setBounds(distTypeBounds   .reduced(marginX, marginY));
     voicesSlider    .setBounds(voicesBounds);
     mixSlider       .setBounds(mixBounds);
+    driveLabel      .setBounds(driveBounds      .removeFromRight(sliderTextWidth));
+    bitDepthLabel   .setBounds(bitDepthBounds   .removeFromRight(sliderTextWidth));
+    voicesLabel     .setBounds(voicesBounds     .removeFromRight(sliderTextWidth));
+    mixLabel        .setBounds(mixBounds        .removeFromRight(sliderTextWidth));
 }
 
 void SuperChorusEditor::timerCallback()

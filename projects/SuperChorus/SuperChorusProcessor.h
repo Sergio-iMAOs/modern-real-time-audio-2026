@@ -30,7 +30,7 @@ namespace Param
         static const juce::String Depth { "Mod Depth" };
         static const juce::String Rate { "Mod Rate" };
         static const juce::String Offset { "Delay" };
-        static const juce::String Smear { "Time Smearing" };
+        static const juce::String Smear { "Smearing" };
         static const juce::String Width { "Width" };
         static const juce::String Distort { "Drive" };
         static const juce::String BitDepth { "Bit Depth" };
@@ -105,7 +105,7 @@ class SuperChorusProcessor : public mrta::BaseProcessor
 {
 public:
     static constexpr float MaxDelaySizeMs { 
-        Param::Ranges::VoicesMax * Param::Ranges::OffsetMax * Param::Ranges::SmearMax + Param::Ranges::DepthMax
+        Param::Ranges::VoicesMax * Param::Ranges::OffsetMax * Param::Ranges::SmearMax * 0.5f + Param::Ranges::DepthMax
     };
     static const unsigned int MaxChannels { 2 };
 

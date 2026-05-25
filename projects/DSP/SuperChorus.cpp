@@ -148,7 +148,7 @@ void SuperChorus::setOffset(float newOffsetMs)
     // Voices further away from stereo filed centre are smeared more
     for (auto i = 0; i < halfVoices; ++i)
     {
-        auto smear = static_cast<float>(numVoices - 1 - i);
+        auto smear = static_cast<float>(halfVoices - 1 - i);
         voices[i]->setOffset(offset + offset * smear * timeSmearing);
         voices[numVoices - 1 - i]->setOffset(offset + offset * (smear + 0.5f) * timeSmearing);
     }
@@ -159,7 +159,9 @@ void SuperChorus::setOffset(float newOffsetMs)
     parity = parity ^ (parity >> 8);
     parity = parity ^ (parity >> 16);
     if (!(parity & 1))
+    {
         voices[halfVoices]->setOffset(offset);
+    }
 }
 
 void SuperChorus::setTimeSmearing(float newTimeSmearing)

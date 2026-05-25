@@ -5,6 +5,8 @@
 class SuperChorusLAF : public juce::LookAndFeel_V4
 {
 public:
+    SuperChorusLAF();
+
     virtual void drawPluginBackground(
         juce::Graphics& g,
         int width,
@@ -16,15 +18,33 @@ public:
         std::vector<float> timePos,
         std::vector<float> stereoPos,
         float drive,
-        float bitDepth
+        float bitDepth,
+        bool softClip
     );
 
+    // Juce methods
+    void drawRotarySlider(
+        juce::Graphics &g,
+        int x,
+        int y,
+        int width,
+        int height,
+        float sliderPosProportional,
+        float rotaryStartAngle,
+        float rotaryEndAngle,
+        juce::Slider &slider
+    ) override;
+
+    juce::Slider::SliderLayout getSliderLayout(juce::Slider& slider) override;
+    juce::Label* createSliderTextBox(juce::Slider& slider) override;
+    
 
 private:
-    juce::Colour colour0 { 0xffecffff }; //  #ecffff
-    juce::Colour colour1 { 0xff74c1c1 }; //  #74c1c1
-    juce::Colour colour2 { 0xff265353 }; //  #265353
-    juce::Colour colour3 { 0xffc17474 }; //  #c17474
-    juce::Colour colour4 { 0xffe9b32a }; //  #e9b32a
-    juce::Colour colour5 { 0xffb40000 }; //  #b40000
+    juce::Colour colour0 { 0xffffffff }; //  #ffffff
+    juce::Colour colour1 { 0xffecffff }; //  #ecffff
+    juce::Colour colour2 { 0xff74c1c1 }; //  #74c1c1
+    juce::Colour colour3 { 0xff305050 }; //  #305050
+    juce::Colour colour4 { 0xffc17474 }; //  #c17474
+    juce::Colour colour5 { 0xffe9b32a }; //  #e9b32a
+    juce::Colour colour6 { 0xffb40000 }; //  #b40000
 };
