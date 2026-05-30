@@ -1,2 +1,3 @@
-SuperChorus setNumVoices calls reset() clicks?
-    Ramp phase?
+Display
+
+Logo

@@ -36,11 +36,10 @@ SuperChorusEditor::SuperChorusEditor(SuperChorusProcessor& p) :
     bitDepthLabel   { "", Param::Name::BitDepth },
     distTypeLabel   { "", Param::Name::DistType },
     voicesLabel     { "", Param::Name::Voices },
-    mixLabel        { "", Param::Name::Mix },
-    enabledLabel    { "", Param::Name::Enabled }
+    mixLabel        { "", Param::Name::Mix }
 {
-    // Set button text
-    enabledButton.setButtonText(Param::Name::Enabled);
+    modTypeLabel    .setJustificationType(juce::Justification::bottomLeft);
+    distTypeLabel   .setJustificationType(juce::Justification::bottomLeft);
 
     // Add components to view
     addAndMakeVisible(delaySlider);
@@ -66,7 +65,6 @@ SuperChorusEditor::SuperChorusEditor(SuperChorusProcessor& p) :
     addAndMakeVisible(distTypeLabel);
     addAndMakeVisible(voicesLabel);
     addAndMakeVisible(mixLabel);
-    addAndMakeVisible(enabledLabel);
 
     // Set look and feel
     setLookAndFeel(&laf);
@@ -122,7 +120,7 @@ void SuperChorusEditor::resized()
     const auto componentHeight  = bounds.getHeight() / 6; 
     const auto labelHeight      = componentHeight / 4;
     const auto marginX          = 6;
-    const auto marginY          = 12;
+    const auto marginY          = 8;
     const auto sliderTextWidth  = mixSlider.getTextBoxWidth();
 
     auto rightBounds    = bounds.removeFromRight(componentWidth);

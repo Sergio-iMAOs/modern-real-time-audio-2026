@@ -143,24 +143,20 @@ void SuperChorus::setOffset(float newOffsetMs)
 {
     offset = newOffsetMs;
     auto halfVoices = numVoices / 2;
+    const auto smearStep = static_cast<float>(MAX_VOICES) / numVoices;
 
     // Assign each chorus voice a different offset
     // Voices further away from stereo filed centre are smeared more
     for (auto i = 0; i < halfVoices; ++i)
     {
-        auto smear = static_cast<float>(halfVoices - 1 - i);
+        auto smear = static_cast<float>(halfVoices - 1 - i) * smearStep;
         voices[i]->setOffset(offset + offset * smear * timeSmearing);
         voices[numVoices - 1 - i]->setOffset(offset + offset * (smear + 0.5f) * timeSmearing);
     }
     // Check parity
-    auto parity = numVoices ^ (numVoices >> 1);
-    parity = parity ^ (parity >> 2);
-    parity = parity ^ (parity >> 4);
-    parity = parity ^ (parity >> 8);
-    parity = parity ^ (parity >> 16);
-    if (!(parity & 1))
+    if (numVoices & 1)
     {
-        voices[halfVoices]->setOffset(offset);
+        voices[halfVoices]->setOffset(offset - offset * 0.25f * timeSmearing);
     }
 }
 

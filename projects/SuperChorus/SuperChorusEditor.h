@@ -46,7 +46,6 @@ private:
     juce::Label distTypeLabel;
     juce::Label voicesLabel;
     juce::Label mixLabel;
-    juce::Label enabledLabel;
 
     SuperChorusLAF laf;
 

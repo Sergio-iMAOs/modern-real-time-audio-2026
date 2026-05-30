@@ -43,7 +43,7 @@ namespace Param
     namespace Ranges
     {
         static constexpr float DepthMin { 0.f };
-        static constexpr float DepthMax { 10.f };
+        static constexpr float DepthMax { 100.f };
         static constexpr float DepthInc { 0.01f };
         static constexpr float DepthSkw { 0.5f };
 

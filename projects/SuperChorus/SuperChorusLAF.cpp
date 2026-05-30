@@ -408,6 +408,86 @@ void SuperChorusLAF::drawRotarySlider(
     );
 }
 
+
+void SuperChorusLAF::drawButtonBackground(
+    juce::Graphics &g,
+    juce::Button &button,
+    const juce::Colour &backgroundColour,
+    bool shouldDrawButtonAsHighlighted,
+    bool shouldDrawButtonAsDown
+)
+{
+    auto bounds                     = button.getLocalBounds().toFloat();
+    const auto left                 = bounds.getX();
+    const auto right                = bounds.getX() + bounds.getWidth();
+    const auto top                  = bounds.getY();
+    const auto bottom               = bounds.getY() + bounds.getHeight();
+    const auto centreX              = left + (right - left) * 0.5f;
+    const auto centreY              = top + (bottom - top) * 0.5f;
+    const auto inBorderColour       = colour2;
+    const auto onColour             = colour4;
+    const auto offColour            = colour3;
+    auto inCentreColour             = offColour;
+    const auto outSideColour        = colour2;
+    const auto outCentreColour      = colour3;
+    const auto cornerSize           = 15.f;
+    const auto displacement         = 3.f;
+    const auto outThickness         = 3.f;
+
+    bounds.removeFromBottom(displacement);
+
+
+    /**
+     * TODO
+     * There is a gap between inside and outline. Fill it with
+     * colour6
+     * Seems like the outline is popping out on the top too, but it should
+     * only on the bottom. The top should be covered by inside
+     */
+
+
+    // Outline
+    bounds = bounds.reduced(outThickness * 0.5f);
+    auto outBounds = bounds;
+    outBounds.translate(0.f, displacement);
+
+    juce::ColourGradient outGradient (
+        outCentreColour,
+        left,
+        bottom,
+        outSideColour,
+        left,
+        top,
+        false
+    );
+    g.setGradientFill(outGradient);
+    g.drawEllipse(outBounds, outThickness);
+
+    // Inside
+    if (shouldDrawButtonAsDown)
+    {
+        bounds.translate(0.f, displacement);
+    }
+
+    if (button.getToggleState())
+    {
+        inCentreColour = onColour;
+    }
+
+    juce::ColourGradient inGradient(
+        inCentreColour,
+        centreX,
+        centreY,
+        inBorderColour,
+        left,
+        centreY,
+        true
+    );
+    g.setGradientFill(inGradient);
+    g.fillEllipse(bounds);
+}
+
+
 juce::Slider::SliderLayout SuperChorusLAF::getSliderLayout (juce::Slider& slider)
 {
     juce::Slider::SliderLayout layout;
@@ -449,7 +529,84 @@ juce::Label *SuperChorusLAF::createSliderTextBox(juce::Slider &slider)
 {
     auto* label = new juce::Label();
     label->setColour(juce::Label::textColourId, colour3);
-    label->setColour(juce::Label::backgroundColourId, colour0);
+    label->setColour(juce::Label::backgroundColourId, juce::Colour(0x00000000));
     label->setJustificationType(juce::Justification::left);
     return label;
+}
+
+void SuperChorusLAF::drawComboBox(
+    juce::Graphics &g,
+    int width,
+    int height,
+    bool isButtonDown,
+    int buttonX,
+    int buttonY,
+    int buttonW,
+    int buttonH,
+    juce::ComboBox &cb 
+)
+{
+    auto bounds         = cb.getLocalBounds().toFloat();
+    const auto centreX  = bounds.getCentreX();
+    const auto centreY  = bounds.getCentreY();
+    const auto left     = bounds.getX();
+    const auto top      = bounds.getY();
+    const auto bottom   = bounds.getBottom();
+    const auto cornerSize = 20.f;
+    auto inColour       = colour3;
+
+    // Box
+    juce::Path boxPath;
+    boxPath.addRoundedRectangle(bounds, cornerSize);
+    if (isButtonDown)
+    {
+        inColour = colour4;
+    }
+
+    // Button
+    const auto buttonMargin = 10.f;
+    const auto buttonSpace  = 3.f;
+    const auto numLines     = 3;
+    const auto thickness    = 1.5f;
+    const auto lineX        = buttonX;
+    const auto lineWidth    = buttonW - buttonMargin;
+    const auto lineYIncr    = buttonSpace + thickness;
+    auto lineY              = centreY - (numLines / 2) * lineYIncr;
+
+    juce::Path buttonPath;
+    for (auto i = 0; i < numLines; ++i)
+    {
+        buttonPath.addRoundedRectangle(lineX, lineY - thickness * 0.5f, lineWidth, thickness, thickness);
+        lineY += lineYIncr;
+    }
+
+    // Substract button from box
+    boxPath.addPath(buttonPath);
+    boxPath.setUsingNonZeroWinding(false);
+
+    juce::ColourGradient boxGradient(
+        inColour,
+        centreX,
+        centreY,
+        colour2,
+        left,
+        centreY,
+        true
+    );
+    g.setGradientFill(boxGradient);
+    g.fillPath(boxPath);
+}
+
+void SuperChorusLAF::positionComboBoxText(juce::ComboBox& box, juce::Label& label)
+{
+    constexpr int textOffsetX = 20;
+
+    label.setBounds(
+        1 + textOffsetX,
+        1,
+        box.getWidth() - 30 - textOffsetX,
+        box.getHeight() - 2
+    );
+
+    label.setFont(getComboBoxFont(box));
 }
