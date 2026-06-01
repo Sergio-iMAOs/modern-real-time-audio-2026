@@ -1,3 +1,5 @@
 Display
+    Points
+    Bitcrush
 
 Logo

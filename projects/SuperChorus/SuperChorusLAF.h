@@ -22,6 +22,7 @@ public:
         bool softClip
     );
 
+
     // Juce methods
     void drawRotarySlider(
         juce::Graphics &g,
@@ -35,6 +36,9 @@ public:
         juce::Slider &slider
     ) override;
 
+    juce::Slider::SliderLayout getSliderLayout(juce::Slider& slider) override;
+    juce::Label* createSliderTextBox(juce::Slider& slider) override;
+
     void drawButtonBackground(
         juce::Graphics &g,
         juce::Button &button,
@@ -42,9 +46,6 @@ public:
         bool shouldDrawButtonAsHighlighted,
         bool shouldDrawButtonAsDown
     ) override;
-
-    juce::Slider::SliderLayout getSliderLayout(juce::Slider& slider) override;
-    juce::Label* createSliderTextBox(juce::Slider& slider) override;
 
     void drawComboBox(
         juce::Graphics &g,

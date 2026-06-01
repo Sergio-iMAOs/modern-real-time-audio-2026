@@ -19,6 +19,134 @@ void SuperChorusLAF::drawPluginBackground(juce::Graphics &g, int width, int heig
 }
 
 
+void SuperChorusLAF::drawDisplay(
+    juce::Graphics& g,
+    juce::Rectangle<int> bnds,
+    std::vector<float> timePos,
+    std::vector<float> stereoPos,
+    float drive,
+    float bitDepth,
+    bool softClip
+)
+{
+    const auto bounds           = bnds.toFloat();
+    const auto centreX          = bounds.getX() + bounds.getWidth() * 0.5f;
+    const auto centreY          = bounds.getY() + bounds.getHeight();
+    const auto radiusX          = bounds.getWidth() * 0.5f;
+    const auto radiusY          = bounds.getHeight();
+    const auto innerRadiusProp  = 0.2f;
+    const auto innerRadiusX     = radiusX * innerRadiusProp;
+    const auto innerRadiusY     = radiusY * innerRadiusProp;
+    constexpr auto underAngle   = M_PI / 180.f *  10.f;
+
+    constexpr auto startAngle   = 3.f * M_PI * 0.5f + underAngle;
+    constexpr auto endAngle     = 2.f * M_PI + M_PI * 0.5f - underAngle;
+
+    // Would be better to split into multiple virtual methods
+    // so parts can be customized independently
+
+    // --- Sector ---
+
+    // Background
+    juce::Path sectorPath;
+    sectorPath.addCentredArc(
+        centreX,
+        centreY,
+        radiusX,
+        radiusY,
+        0.f,
+        startAngle,
+        endAngle,
+        true
+    );
+    sectorPath.lineTo(
+        centreX + std::cos(underAngle) * innerRadiusX,
+        centreY - std::sin(underAngle) * innerRadiusY
+    );
+    sectorPath.addCentredArc(
+        centreX,
+        centreY,
+        innerRadiusX,
+        innerRadiusY,
+        0.f,
+        endAngle,
+        startAngle,
+        false
+    );
+    sectorPath.closeSubPath();
+    juce::ColourGradient backgroundGradient(
+        colour3,
+        centreX,
+        centreY,
+        colour0.withAlpha(0.f),
+        centreX,
+        0.f,
+        true
+    );
+    backgroundGradient.addColour(innerRadiusY / radiusY, colour3);
+    backgroundGradient.addColour(0.5, colour2);
+    g.setGradientFill(backgroundGradient);
+    g.fillPath(sectorPath);
+
+    // Guide grid
+    constexpr auto numArcs      = 12;
+    constexpr auto numLines     = 8;
+    constexpr auto thickness    = 1.5f;
+    juce::Path gridPath;
+
+    // Arcs
+    const auto nArcs = numArcs + 2;
+    for (auto i = 0; i < nArcs - 1; ++i)
+    {
+        // t goes from 0 (innermost) to 1 (outermost), linearly
+        const float t = static_cast<float>(i) / static_cast<float>(nArcs - 1);
+
+        // Invert: sample the log curve from the other end
+        const float logT = utils::fast_log2(2.f - t);
+
+        // Interpolate proportion between innerRadiusProp and 1.0
+        const float radiusProp = innerRadiusProp + logT * (1.f - innerRadiusProp);
+
+        gridPath.addCentredArc(
+            centreX,
+            centreY,
+            radiusProp * radiusX,
+            radiusProp * radiusY,
+            0.f,
+            startAngle,
+            endAngle,
+            true
+        );
+    }
+
+    // Lines
+    const auto nLines = numLines + 2;
+    for (auto i = 1; i < nLines - 1; ++i)
+    {
+        const float t = nLines == 1
+            ? 0.5f
+            : static_cast<float>(i) / static_cast<float>(nLines - 1);
+
+        const float angle = startAngle + t * (endAngle - startAngle) - M_PI * 0.5f;
+
+        const float cosA = std::cos(angle);
+        const float sinA = std::sin(angle);
+
+        const float outerX = centreX + radiusX * cosA;
+        const float outerY = centreY + radiusY * sinA;
+
+        const float innerX = centreX + innerRadiusX * cosA;
+        const float innerY = centreY + innerRadiusY * sinA;
+
+        gridPath.startNewSubPath(outerX, outerY);
+        gridPath.lineTo(innerX, innerY);
+    }
+
+    g.setColour(colour1.withAlpha(0.25f));
+    g.strokePath(gridPath, juce::PathStrokeType(thickness));
+}
+
+/*
 // Mostly AI generated
 void SuperChorusLAF::drawDisplay(
     juce::Graphics& g,
@@ -186,6 +314,7 @@ void SuperChorusLAF::drawDisplay(
                        cx + rMax * std::sin(rad), cy - rMax * std::cos(rad), 0.8f);
         }
     }
+    
 
     //--------------------------------------------------------------------------
     // 5. Sector border
@@ -290,7 +419,7 @@ void SuperChorusLAF::drawDisplay(
         }
     }
 }
-
+*/
 
 // -----------------------------
 // ---------- SLIDERS ----------
@@ -409,6 +538,56 @@ void SuperChorusLAF::drawRotarySlider(
 }
 
 
+juce::Slider::SliderLayout SuperChorusLAF::getSliderLayout (juce::Slider& slider)
+{
+    juce::Slider::SliderLayout layout;
+
+    // Entire slider bounds
+    auto bounds = slider.getLocalBounds();
+
+    // Textbox dimensions
+    const int textBoxWidth   = slider.getTextBoxWidth();
+    const int textBoxHeight  = slider.getTextBoxHeight();
+    const int bottomMargin   = textBoxHeight * 0.5f;
+
+    // Default: slider takes whole area
+    layout.sliderBounds = bounds;
+
+    if (slider.getTextBoxPosition() == juce::Slider::TextBoxRight)
+    {
+        // Place textbox at bottom-right instead of centered-right
+        layout.textBoxBounds = juce::Rectangle<int>(
+            bounds.getRight() - textBoxWidth,
+            bounds.getBottom() - textBoxHeight - bottomMargin,
+            textBoxWidth,
+            textBoxHeight
+        );
+
+        // Reduce slider bounds so it doesn't overlap textbox
+        layout.sliderBounds.removeFromRight(textBoxWidth);
+    }
+    else
+    {
+        // Fallback to default JUCE behaviour
+        return juce::LookAndFeel_V4::getSliderLayout(slider);
+    }
+
+    return layout;
+}
+
+juce::Label *SuperChorusLAF::createSliderTextBox(juce::Slider &slider)
+{
+    auto* label = new juce::Label();
+    label->setColour(juce::Label::textColourId, colour3);
+    label->setColour(juce::Label::backgroundColourId, juce::Colour(0x00000000));
+    label->setJustificationType(juce::Justification::left);
+    return label;
+}
+
+
+// -----------------------------
+// ---------- BUTTON -----------
+// -----------------------------
 void SuperChorusLAF::drawButtonBackground(
     juce::Graphics &g,
     juce::Button &button,
@@ -488,52 +667,9 @@ void SuperChorusLAF::drawButtonBackground(
 }
 
 
-juce::Slider::SliderLayout SuperChorusLAF::getSliderLayout (juce::Slider& slider)
-{
-    juce::Slider::SliderLayout layout;
-
-    // Entire slider bounds
-    auto bounds = slider.getLocalBounds();
-
-    // Textbox dimensions
-    const int textBoxWidth   = slider.getTextBoxWidth();
-    const int textBoxHeight  = slider.getTextBoxHeight();
-    const int bottomMargin   = textBoxHeight * 0.5f;
-
-    // Default: slider takes whole area
-    layout.sliderBounds = bounds;
-
-    if (slider.getTextBoxPosition() == juce::Slider::TextBoxRight)
-    {
-        // Place textbox at bottom-right instead of centered-right
-        layout.textBoxBounds = juce::Rectangle<int>(
-            bounds.getRight() - textBoxWidth,
-            bounds.getBottom() - textBoxHeight - bottomMargin,
-            textBoxWidth,
-            textBoxHeight
-        );
-
-        // Reduce slider bounds so it doesn't overlap textbox
-        layout.sliderBounds.removeFromRight(textBoxWidth);
-    }
-    else
-    {
-        // Fallback to default JUCE behaviour
-        return juce::LookAndFeel_V4::getSliderLayout(slider);
-    }
-
-    return layout;
-}
-
-juce::Label *SuperChorusLAF::createSliderTextBox(juce::Slider &slider)
-{
-    auto* label = new juce::Label();
-    label->setColour(juce::Label::textColourId, colour3);
-    label->setColour(juce::Label::backgroundColourId, juce::Colour(0x00000000));
-    label->setJustificationType(juce::Justification::left);
-    return label;
-}
-
+// -----------------------------
+// ---------- COMBOBOX --------
+// -----------------------------
 void SuperChorusLAF::drawComboBox(
     juce::Graphics &g,
     int width,
