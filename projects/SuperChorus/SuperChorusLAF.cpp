@@ -1,6 +1,7 @@
 #include "SuperChorusLAF.h"
 
 #include "Utils.h"
+#include <BinaryData.h>
 
 SuperChorusLAF::SuperChorusLAF()
 {
@@ -23,10 +24,10 @@ void SuperChorusLAF::drawTitle(
     juce::Rectangle<int> bounds
 )
 {
-    static const char* const imagePath = "./assets/title.png";
-
-    juce::File imageFile(imagePath);
-    juce::Image image = juce::ImageFileFormat::loadFrom(imageFile);
+    juce::Image image = juce::ImageCache::getFromMemory(
+        BinaryData::title_png,
+        BinaryData::title_pngSize
+    );
 
     if (image.isValid())
         g.drawImage(image, bounds.toFloat());
@@ -89,21 +90,38 @@ void SuperChorusLAF::drawDisplay(
     sectorPath.closeSubPath();
 
     // Bit depth colour
-    const auto bgColour = (1.f - bitDepth) < 0.5f
-            ? colour3.interpolatedWith(colour4, (1.f - bitDepth) * 2.f)
-            : colour4.interpolatedWith(colour5, ((1.f - bitDepth) - 0.5f) * 2.f);
+    juce::Colour bgColour;
+
+    if ((1.f - bitDepth) < 0.5f)
+    {
+        bgColour = colour2.interpolatedWith(
+            colour4,
+            (1.f - bitDepth) * 2.f);
+    }
+    else
+    {
+        const float t = ((1.f - bitDepth) - 0.5f) * 2.f;
+
+        bgColour = colour4.interpolatedWith(colour0, t);
+
+        // Fade out as we approach bitDepth == 0
+        bgColour = bgColour.withAlpha(1.f - t);
+    }
 
     juce::ColourGradient backgroundGradient(
         colour3,
         centreX,
         centreY,
-        colour0.withAlpha(0.f),
+        bgColour.withAlpha(0.f),
         centreX,
-        0.f,
+        bounds.getY(),
         true
     );
+
     backgroundGradient.addColour(innerRadiusY / radiusY, colour3);
-    backgroundGradient.addColour(0.5, bgColour);
+    backgroundGradient.addColour(0.75f, bgColour);
+    backgroundGradient.addColour(0.90f, bgColour.withMultipliedAlpha(0.4f));
+
     g.setGradientFill(backgroundGradient);
     g.fillPath(sectorPath);
 

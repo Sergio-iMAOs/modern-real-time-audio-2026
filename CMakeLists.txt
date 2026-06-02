@@ -322,8 +322,11 @@ add_plugin(synth
         ${synth})
 
 
-# Add "PhaseVocoder" plugin target
+# Add "SuperChorus" plugin target
 set(spch_source ${CMAKE_CURRENT_SOURCE_DIR}/projects/SuperChorus)
+
+juce_add_binary_data(spch_title_data
+    SOURCES ${spch_source}/assets/title.png)
 
 add_plugin(SuperChorus
     VERSION 0.0.1
@@ -341,4 +344,7 @@ add_plugin(SuperChorus
         ${dsp_source}/SuperChorus.cpp
     INCLUDE_DIRS
         ${dsp_source}
-        ${spch_source})
+        ${spch_source}
+    LINK_LIBS
+        spch_title_data
+)

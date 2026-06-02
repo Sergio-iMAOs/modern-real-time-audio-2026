@@ -122,9 +122,10 @@ void SuperChorusEditor::resized()
     const auto componentWidth   = bounds.getWidth() / 4;
     const auto componentHeight  = bounds.getHeight() / 6; 
     const auto labelHeight      = componentHeight / 4;
-    const auto marginX          = 6;
-    const auto marginY          = 8;
+    constexpr auto marginX      = 6;
+    constexpr auto marginY      = 8;
     const auto sliderTextWidth  = mixSlider.getTextBoxWidth();
+    constexpr auto titleMargin  = 5;
 
     auto rightBounds    = bounds.removeFromRight(componentWidth);
     auto& leftBounds    = bounds;
@@ -132,7 +133,7 @@ void SuperChorusEditor::resized()
     // Left
 
     // Title
-    titleBounds    = leftBounds.removeFromTop(componentHeight);
+    titleBounds         = leftBounds.removeFromTop(componentHeight).reduced(titleMargin);
 
     // Display
     displayBounds       = leftBounds.removeFromTop(componentHeight * 3);
