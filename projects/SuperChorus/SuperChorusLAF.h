@@ -12,6 +12,10 @@ public:
         int width,
         int height
     );
+    virtual void drawTitle(
+        juce::Graphics& g,
+        juce::Rectangle<int> bounds
+    );
     virtual void drawDisplay(
         juce::Graphics& g,
         juce::Rectangle<int> bounds,
@@ -19,7 +23,8 @@ public:
         std::vector<float> stereoPos,
         float drive,
         float bitDepth,
-        bool softClip
+        bool softClip,
+        bool isEnabled
     );
 
 
@@ -67,6 +72,6 @@ private:
     juce::Colour colour2 { 0xff74c1c1 }; //  #74c1c1
     juce::Colour colour3 { 0xff548b8b }; //  #548b8b
     juce::Colour colour4 { 0xffc17474 }; //  #c17474
-    juce::Colour colour5 { 0xffe9b32a }; //  #e9b32a
+    juce::Colour colour5 { 0xffb6552b }; //  #b6552b
     juce::Colour colour6 { 0xffb40000 }; //  #b40000
 };

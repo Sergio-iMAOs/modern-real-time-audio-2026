@@ -38,6 +38,10 @@ void SuperChorus::prepare(double newSampleRate, int samplesPerBlock, float maxTi
 
     for (auto& chorus : voices)
         chorus->prepare(newSampleRate, maxTimeMs, numChannels);
+    
+    // Initialize voices with correct position
+    setNumVoices(numVoices);
+    reset();
 }
 
 void SuperChorus::clear()

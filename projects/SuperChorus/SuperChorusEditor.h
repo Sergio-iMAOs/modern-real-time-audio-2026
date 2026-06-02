@@ -21,6 +21,7 @@ private:
     SuperChorusProcessor& processor;
     DSP::SuperChorus& superChorus;
 
+    juce::Rectangle<int> titleBounds;
     juce::Rectangle<int> displayBounds;
     mrta::ParameterSlider delaySlider;
     mrta::ParameterSlider smearSlider;

@@ -107,8 +107,11 @@ void SuperChorusEditor::paint(juce::Graphics& g)
         superChorus.getNormalizedStereoPositions(),
         normalizedDrive,
         normalizedBitDepth,
-        distTypeComboBox.getSelectedItemIndex() == DSP::SuperChorus::DistortionType::SoftClip
+        distTypeComboBox.getSelectedItemIndex() == DSP::SuperChorus::DistortionType::SoftClip,
+        enabledButton.getToggleState()
     );
+
+    laf.drawTitle(g, titleBounds);
 }
 
 void SuperChorusEditor::resized()
@@ -129,7 +132,7 @@ void SuperChorusEditor::resized()
     // Left
 
     // Title
-    auto titleBounds    = leftBounds.removeFromTop(componentHeight);
+    titleBounds    = leftBounds.removeFromTop(componentHeight);
 
     // Display
     displayBounds       = leftBounds.removeFromTop(componentHeight * 3);

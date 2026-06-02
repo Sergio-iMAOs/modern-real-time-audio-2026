@@ -18,6 +18,19 @@ void SuperChorusLAF::drawPluginBackground(juce::Graphics &g, int width, int heig
     g.fillAll();
 }
 
+void SuperChorusLAF::drawTitle(
+    juce::Graphics &g,
+    juce::Rectangle<int> bounds
+)
+{
+    static const char* const imagePath = "./assets/title.png";
+
+    juce::File imageFile(imagePath);
+    juce::Image image = juce::ImageFileFormat::loadFrom(imageFile);
+
+    if (image.isValid())
+        g.drawImage(image, bounds.toFloat());
+}
 
 void SuperChorusLAF::drawDisplay(
     juce::Graphics& g,
@@ -26,12 +39,14 @@ void SuperChorusLAF::drawDisplay(
     std::vector<float> stereoPos,
     float drive,
     float bitDepth,
-    bool softClip
+    bool softClip,
+    bool isEnabled
 )
 {
     const auto bounds           = bnds.toFloat();
     const auto centreX          = bounds.getX() + bounds.getWidth() * 0.5f;
     const auto centreY          = bounds.getY() + bounds.getHeight();
+    const juce::Point<float> centre(centreX, centreY);
     const auto radiusX          = bounds.getWidth() * 0.5f;
     const auto radiusY          = bounds.getHeight();
     const auto innerRadiusProp  = 0.2f;
@@ -45,9 +60,7 @@ void SuperChorusLAF::drawDisplay(
     // Would be better to split into multiple virtual methods
     // so parts can be customized independently
 
-    // --- Sector ---
-
-    // Background
+    // --- Background ---
     juce::Path sectorPath;
     sectorPath.addCentredArc(
         centreX,
@@ -74,6 +87,12 @@ void SuperChorusLAF::drawDisplay(
         false
     );
     sectorPath.closeSubPath();
+
+    // Bit depth colour
+    const auto bgColour = (1.f - bitDepth) < 0.5f
+            ? colour3.interpolatedWith(colour4, (1.f - bitDepth) * 2.f)
+            : colour4.interpolatedWith(colour5, ((1.f - bitDepth) - 0.5f) * 2.f);
+
     juce::ColourGradient backgroundGradient(
         colour3,
         centreX,
@@ -84,11 +103,11 @@ void SuperChorusLAF::drawDisplay(
         true
     );
     backgroundGradient.addColour(innerRadiusY / radiusY, colour3);
-    backgroundGradient.addColour(0.5, colour2);
+    backgroundGradient.addColour(0.5, bgColour);
     g.setGradientFill(backgroundGradient);
     g.fillPath(sectorPath);
 
-    // Guide grid
+    // --- Guide grid ---
     constexpr auto numArcs      = 12;
     constexpr auto numLines     = 8;
     constexpr auto thickness    = 1.5f;
@@ -96,7 +115,7 @@ void SuperChorusLAF::drawDisplay(
 
     // Arcs
     const auto nArcs = numArcs + 2;
-    for (auto i = 0; i < nArcs - 1; ++i)
+    for (auto i = 1; i < nArcs - 1; ++i)
     {
         // t goes from 0 (innermost) to 1 (outermost), linearly
         const float t = static_cast<float>(i) / static_cast<float>(nArcs - 1);
@@ -144,6 +163,100 @@ void SuperChorusLAF::drawDisplay(
 
     g.setColour(colour1.withAlpha(0.25f));
     g.strokePath(gridPath, juce::PathStrokeType(thickness));
+
+
+    // --- Voice dots ---
+    if (isEnabled)
+    {
+        const auto numDots = std::min(timePos.size(), stereoPos.size());
+        constexpr float dotRadius       = 5.f;
+        constexpr float glowRadius      = 10.f;
+        constexpr float glowAlpha       = 0.18f;
+        constexpr float highlightAlpha  = 0.55f;
+
+        for (auto i = 0; i < numDots; ++i)
+        {
+            const auto time     = timePos[i];
+            const auto stereo   = stereoPos[i];
+            const auto point = centre.getPointOnCircumference(
+                innerRadiusX + (radiusX  - innerRadiusX) * time,
+                innerRadiusY + (radiusY  - innerRadiusY) * time,
+                startAngle   + (endAngle - startAngle)   * stereo
+            );
+            const juce::Rectangle<float> glowArea(
+                point.getX() - glowRadius,
+                point.getY() - glowRadius,
+                glowRadius * 2.f,
+                glowRadius * 2.f
+            );
+            const juce::Rectangle<float> coreArea(
+                point.getX() - dotRadius,
+                point.getY() - dotRadius,
+                dotRadius * 2.f,
+                dotRadius * 2.f
+            );
+            const juce::Rectangle<float> highlightArea(
+                point.getX() - dotRadius * 0.35f,
+                point.getY() - dotRadius * 0.75f,
+                dotRadius * 0.55f,
+                dotRadius * 0.5f
+            );
+
+            // Colour depending on drive
+            auto voiceDrive = drive * std::fabs(static_cast<float>(i) / static_cast<float>(numDots - 1) * 2.f - 1.f);
+            const auto dotColour = voiceDrive < 0.5f
+                ? colour1.interpolatedWith(colour4, voiceDrive * 2.f)
+                : colour4.interpolatedWith(colour6, (voiceDrive - 0.5f) * 2.f);
+
+            if (softClip)
+            {
+                // Glow
+                g.setColour(dotColour.withAlpha(glowAlpha));
+                g.fillEllipse(glowArea);
+
+                // Core dot
+                g.setColour(dotColour);
+                g.fillEllipse(coreArea);
+
+                // Highlight
+                g.setColour(juce::Colours::white.withAlpha(highlightAlpha));
+                g.fillEllipse(highlightArea);
+            }
+            else
+            {
+                // Hard clip
+                constexpr float angle = M_PI * 0.25f;
+                const auto rotation = juce::AffineTransform::rotation(angle, point.getX(), point.getY());
+
+                // Glow
+                {
+                    juce::Path path;
+                    path.addRectangle(glowArea);
+
+                    g.setColour(dotColour.withAlpha(glowAlpha));
+                    g.fillPath(path, rotation);
+                }
+
+                // Core dot
+                {
+                    juce::Path path;
+                    path.addRectangle(coreArea);
+
+                    g.setColour(dotColour);
+                    g.fillPath(path, rotation);
+                }
+
+                // Highlight
+                {
+                    juce::Path path;
+                    path.addRectangle(highlightArea);
+
+                    g.setColour(juce::Colours::white.withAlpha(highlightAlpha));
+                    g.fillPath(path, rotation);
+                }
+            }
+        }
+    }
 }
 
 /*
